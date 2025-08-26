@@ -1,4 +1,4 @@
-print "Starting my-plugin"
+print("Starting my-plugin")
 
 local M = {}
 
@@ -30,7 +30,7 @@ end
 --- @return R new instance
 ---
 function R:new_from_literal(text, lines)
-  local o = self:new {}
+  local o = self:new({})
   for _ = 1, lines, 1 do
     o:add_line(text)
   end
@@ -42,7 +42,9 @@ end
 --- This is the number of lines the rendered text consists of
 --- @return number height
 ---
-function R:get_height() return #self.lines end
+function R:get_height()
+  return #self.lines
+end
 
 ---
 --- Get the width of the rendered block
@@ -224,7 +226,7 @@ function R:transform_lines(f)
 end
 
 local function max_of_arrays(a1, a2)
-  print "Getting max of 2 arrays"
+  print("Getting max of 2 arrays")
   print(vim.inspect(a1))
   print(vim.inspect(a2))
   local result = {}
@@ -239,10 +241,14 @@ local function max_of_arrays(a1, a2)
   return result
 end
 
-local function trim(s) return s:match "^%s*(.-)%s*$" end
+local function trim(s)
+  return s:match("^%s*(.-)%s*$")
+end
 
 local function dbg(s)
-  if not M.debug then return end
+  if not M.debug then
+    return
+  end
   local line = debug.getinfo(2).currentline
   s = vim.inspect(s)
   print("Debug at: " .. line .. " | " .. (s or "<???>"))
@@ -282,7 +288,7 @@ local function determine_column_allignment(dr)
 end
 
 function M.format_table()
-  dbg "Format table start"
+  dbg("Format table start")
   local parser = vim.treesitter.get_parser(0, "markdown") -- current buffer
   local tree = parser:parse()[1]
   local root = tree:root()
@@ -312,14 +318,14 @@ function M.format_table()
     -- dbg(vim.inspect(match))
     -- vim.treesitter.get_node_text(match, 0)
   end
-  dbg "Format table end"
+  dbg("Format table end")
 end
 
 local function render_table_header(h, r_header)
   local index = 1
   for node, _node_name in h:iter_children() do
     if node:type() == "pipe_table_cell" then
-      local column_renderer = r_header[index] or R:new {}
+      local column_renderer = r_header[index] or R:new({})
       r_header[index] = column_renderer
       index = index + 1
 
@@ -342,29 +348,33 @@ local function render_table_header(h, r_header)
   end
 end
 
-local function render_table_row(r, r_body) render_table_header(r, r_body) end
+local function render_table_row(r, r_body)
+  render_table_header(r, r_body)
+end
 
 function M.format_table_under_cursor()
   -- Get current cursor...
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 
   -- Get current piper_table node...
-  local node = vim.treesitter.get_node { bufnr = 0, row = row, col = col }
+  local node = vim.treesitter.get_node({ bufnr = 0, row = row, col = col })
   while node do
-    if node:type() == "pipe_table" then break end
+    if node:type() == "pipe_table" then
+      break
+    end
 
     node = node:parent()
   end
 
   -- Check piper table
   if not node then
-    vim.notify "No table found at cursor position"
+    vim.notify("No table found at cursor position")
     return
   end
 
   -- Check for syntax error
   if node:has_error() then
-    vim.notify "Table contains a formatting error"
+    vim.notify("Table contains a formatting error")
     return
   end
 
@@ -372,15 +382,23 @@ function M.format_table_under_cursor()
   local start_row, start_col, end_row, end_col = node:range()
 
   local formatted_table_lines = formatted_table:get_lines()
-  -- According to treesitter, the first empty line after the table belongs to
-  -- the table...
-  formatted_table_lines[#formatted_table_lines + 1] = ""
+
+  local current_buffer_line_count = vim.api.nvim_buf_line_count(0)
+  if end_row >= current_buffer_line_count then
+    end_row = current_buffer_line_count - 1
+    local end_line = vim.api.nvim_buf_get_lines(0, end_row, end_row + 1, false)[1]
+    end_col = vim.fn.strchars(end_line)
+  else
+    -- According to treesitter, the first empty line after the table belongs to
+    -- the table...
+    formatted_table_lines[#formatted_table_lines + 1] = ""
+  end
 
   vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, formatted_table_lines)
 end
 
 function M.format_single_table(t)
-  dbg "Formatting table start"
+  dbg("Formatting table start")
 
   local rendered_headers = {}
   local rendered_bodies = {}
@@ -401,14 +419,24 @@ function M.format_single_table(t)
   -- Now set metatables to return default values
   -- (setting them earlier screws up parsing the header, might need to change
   -- that)
-  setmetatable(rendered_headers, { __index = function() return R:new({}):add_line "" end })
-  setmetatable(rendered_bodies, { __index = function() return R:new {} end })
+  setmetatable(rendered_headers, {
+    __index = function()
+      return R:new({}):add_line("")
+    end,
+  })
+  setmetatable(rendered_bodies, {
+    __index = function()
+      return R:new({})
+    end,
+  })
   setmetatable(alignment, { __index = "none" })
 
-  local rendered_table = R:new {}
+  local rendered_table = R:new({})
 
   local cols = math.max(#rendered_bodies, #rendered_headers, #alignment)
-  local pad_func = function(s) return " " .. s .. " " end
+  local pad_func = function(s)
+    return " " .. s .. " "
+  end
 
   for i = 1, cols, 1 do
     local col_width = math.max(3, rendered_bodies[i]:get_width(), rendered_headers[i]:get_width())
@@ -426,18 +454,18 @@ function M.format_single_table(t)
       separator = "-" .. separator .. "-"
     end
 
-    local rendered_header = R:new {}
+    local rendered_header = R:new({})
 
     rendered_header:add_below(rendered_headers[i])
     rendered_header:align(alignment[i] or "none")
     rendered_header:transform_lines(pad_func)
 
-    local rendered_body = R:new {}
+    local rendered_body = R:new({})
     rendered_body:add_below(rendered_bodies[i])
     rendered_body:align(alignment[i] or "none")
     rendered_body:transform_lines(pad_func)
 
-    local rendered_column = R:new {}
+    local rendered_column = R:new({})
 
     rendered_column:add_below(rendered_header)
     rendered_column:add_line(separator)
@@ -446,11 +474,13 @@ function M.format_single_table(t)
     rendered_table:add_left(rendered_column, { separator = "|" })
   end
 
-  rendered_table:add_left(R:new {}, { separator = "|" })
-  if M.debug then rendered_table:print() end
+  rendered_table:add_left(R:new({}), { separator = "|" })
+  if M.debug then
+    rendered_table:print()
+  end
 
   -- dbg(vim.inspect(alignment))
-  dbg "Formatting table end"
+  dbg("Formatting table end")
   return rendered_table
 end
 
@@ -463,7 +493,9 @@ function M.setup(opt)
   vim.api.nvim_create_user_command(
     format_table_under_cursor_command,
     -- command,
-    function() M.format_table_under_cursor() end,
+    function()
+      M.format_table_under_cursor()
+    end,
     { desc = "Format Markdown table under cursor" }
   )
 end
