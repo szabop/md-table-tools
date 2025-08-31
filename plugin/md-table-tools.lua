@@ -54,7 +54,7 @@ end
 function R:get_width()
 	local max_len = 0
 	for _, v in ipairs(self.lines) do
-		max_len = math.max(max_len, string.len(v))
+		max_len = math.max(max_len, vim.fn.strchars(v))
 	end
 	return max_len
 end
@@ -158,7 +158,7 @@ function R:add_left(o, options)
 		local r = o.lines[k] or ""
 		-- print("add_left(): l: [" .. l .. "] r: [" .. r .. "]")
 
-		l = l .. string.rep(" ", width - string.len(l))
+		l = l .. string.rep(" ", width - vim.fn.strchars(l))
 		l = l .. options.separator
 		l = l .. r
 
@@ -194,7 +194,7 @@ function R:align(alignment, width)
 	for _, v in ipairs(self.lines) do
 		-- print("align: ", k, v)
 		local line = vim.trim(tostring(v))
-		local padding_width = width - string.len(line)
+		local padding_width = width - vim.fn.strchars(line)
 
 		if alignment == "left" then
 			-- all is good
