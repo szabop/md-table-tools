@@ -1,4 +1,4 @@
-print("Starting my-plugin (local version)")
+-- print("Starting my-plugin (local version)")
 
 local M = {}
 
