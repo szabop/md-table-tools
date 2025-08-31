@@ -506,9 +506,6 @@ end
 M.setup()
 
 return M
---
--- return M
---
 -- Issues
 --
 -- Correctly do the keyboard/command binding
@@ -519,4 +516,8 @@ return M
 --
 -- Extend with formatting paragraphs/text blocks/lists)
 --
+-- Extend with navigation functionality
+--   - prev/next column
+--   - prev/next table
+-- j
 -- Extend with add column/delete column functionality
